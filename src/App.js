@@ -1,36 +1,101 @@
-import './App.scss';
+import axios from "axios"
+import { useEffect, useRef, useState } from "react"
+import Repos from "./Repos"
+import "./App.scss"
 
 function App() {
-  return (
-  <>
-  <form className="user-form">
-    <input type="text" id='search' placeholder='Search a Github user' />
-  </form>
-  <main id="main">
-    <div className="card">
-      <div>
-        <img src="https://randomuser.me/api/portraits/men/30.jpg" className='avatar' alt="" />
-      </div>
-      <div className="user-info">
-        <h2>John Doe</h2>
-        <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Sunt aspernatur nam explicabo, iure similique neque.</p>
+    const ref = useRef()
+    const [text, setText] = useState("")
+    const [user, setUser] = useState()
+    const [repos, setRepos] = useState()
+    const [userEx, setUserEx] = useState(false)
+    const [reposEx, setReposEx] = useState(false)
 
-        <ul>
-          <li>300 <strong>Followers</strong></li>
-          <li>100 <strong>Following</strong></li>
-          <li>30 <strong>Repos</strong></li>
-        </ul>
+    const APIURL = "https://api.github.com/users/"
+    const getUser = async (userName) => {
+        try {
+            setUserEx(false)
+            const { data } = await axios(APIURL + userName)
+            setUser(data)
+        } catch (err) {
+            setUser("")
+            if (err.response.status === 404) {
+                setUserEx(true)
+            }
+        }
+    }
+    const getRepos = async (userName) => {
+        try {
+            const { data } = await axios(APIURL + userName + "/repos")
+            setRepos(data)
+            setReposEx(true)
+        } catch (err) {
+            setUser("")
+            if (err.response.status === 404) {
+                setReposEx(false)
+            }
+        }
+    }
 
-        <div id="repos">
-          <a href="#" className='repo'>Repo 1</a>
-          <a href="#" className='repo'>Repo 2</a>
-          <a href="#" className='repo'>Repo 3</a>
-        </div>
-      </div>
-    </div>
-  </main>
-  </>
-  );
+    /*  useEffect(()=>{
+    getUser('bradtraversy')
+  },[]) */
+
+    const findUser = (e) => {
+        e.preventDefault()
+
+        if (text) {
+            getUser(text)
+            getRepos(text)
+        }
+    }
+    return (
+        <>
+            <form className="user-form" onSubmit={findUser}>
+                <input type="text" id="search" placeholder="Search a Github user" onChange={(e) => setText(e.target.value)} />
+            </form>
+            {userEx && (
+                <main>
+                    <div className="card">
+                        <h1>No profile with this username</h1>
+                    </div>
+                </main>
+            )}
+            {user && (
+                <main ref={ref} id="main">
+                    <div className="card">
+                        <div>
+                            <img src={user.avatar_url} className="avatar" alt={user.name} />
+                        </div>
+                        <div className="user-info">
+                            <h2>{user.name}</h2>
+                            <p>{user.bio}</p>
+
+                            <ul>
+                                <li>
+                                    {user.followers} <strong>Followers</strong>
+                                </li>
+                                <li>
+                                    {user.following} <strong>Following</strong>
+                                </li>
+                                <li>
+                                    {user.public_repos} <strong>Repos</strong>
+                                </li>
+                            </ul>
+
+                            {reposEx && (
+                                <div id="repos">
+                                    {repos.map(rep=>(
+                                      <Repos key={rep.name} name={rep.name} url={rep.html_url}/>
+                                    )).slice(0, 20)}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </main>
+            )}
+        </>
+    )
 }
 
-export default App;
+export default App
